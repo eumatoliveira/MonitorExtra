@@ -14,6 +14,8 @@ import sys
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 from queue import Empty, Queue
+from pycaw.constants import DEVICE_STATE, EDataFlow, ERole
+from pycaw.pycaw import AudioUtilities
 from zeroconf import IPVersion, ServiceBrowser, ServiceListener, Zeroconf
 import webbrowser
 
@@ -26,7 +28,7 @@ PORTABLE = Path(os.environ["LOCALAPPDATA"]) / "TelaNaRede" / "Moonlight-6.2.0"
 def package_path():
     if getattr(sys, "frozen", False):
         return Path(sys.executable)
-    return Path(__file__).with_name("MonitorExtra-Automatico.exe")
+    return Path(__file__).with_name("MonitorExtra-Audio.exe")
 
 
 def unpack_moonlight():
@@ -213,6 +215,60 @@ def display_mode(mode):
         messagebox.showerror("Modo de tela", str(exc))
 
 
+def audio_settings(parent):
+    dialog = tk.Toplevel(parent)
+    dialog.title("Áudio no Monitor 1")
+    dialog.resizable(False, False)
+    panel = ttk.Frame(dialog, padding=16)
+    panel.grid()
+    ttk.Label(panel, wraplength=390, justify="left", text=(
+        "Selecione a saída de áudio do monitor ou dos alto-falantes do desktop."
+    )).grid(sticky="w", pady=(0, 8))
+    selector = ttk.Combobox(panel, state="readonly", width=55)
+    selector.grid(sticky="ew", pady=(0, 4))
+    try:
+        outputs = AudioUtilities.GetAllDevices(EDataFlow.eRender.value, DEVICE_STATE.ACTIVE.value)
+        current = AudioUtilities.GetSpeakers()
+        selector["values"] = [device.FriendlyName for device in outputs]
+        selected = next((index for index, device in enumerate(outputs)
+                         if current is not None and current.id == device.id), -1)
+        if selected >= 0:
+            selector.current(selected)
+    except Exception as exc:
+        outputs = []
+        messagebox.showerror("Saídas de áudio", str(exc), parent=dialog)
+
+    def apply_output():
+        selected = selector.current()
+        if selected < 0:
+            messagebox.showinfo("Saída de áudio", "Selecione uma saída primeiro.", parent=dialog)
+            return
+        device = outputs[selected]
+        try:
+            AudioUtilities.SetDefaultDevice(device.id, roles=[ERole.eConsole, ERole.eMultimedia])
+            current = AudioUtilities.GetSpeakers()
+            if current is None or current.id != device.id:
+                raise RuntimeError("O Windows não confirmou a saída selecionada.")
+        except Exception as exc:
+            messagebox.showerror("Saída de áudio", str(exc), parent=dialog)
+            return
+        messagebox.showinfo("Saída de áudio", f"Saída padrão: {device.FriendlyName}", parent=dialog)
+
+    ttk.Button(panel, text="Usar como saída padrão", command=apply_output).grid(sticky="w")
+    ttk.Label(panel, wraplength=390, justify="left", text=(
+        "Para tocar somente no desktop, abra o Apollo, vá em Configuração → Áudio/Vídeo, "
+        "desative Stream Audio e salve. Encerre a sessão atual do Moonlight e conecte novamente. "
+        "Essa opção vale para todas as sessões do Apollo."
+    )).grid(sticky="w", pady=(12, 8))
+    ttk.Button(panel, text="Abrir áudio no Apollo",
+               command=lambda: webbrowser.open(APOLLO + "/config")).grid(sticky="w")
+    dialog.transient(parent)
+
+
+def start_monitor(address):
+    return receive("stream", "--audio-on-host", address, "Virtual Display")
+
+
 def saved_address():
     try:
         data = json.loads(PREFERENCES.read_text(encoding="utf-8"))
@@ -262,6 +318,10 @@ def main():
 
     ttk.Button(sender, text="Estender", command=lambda: display_mode("/extend")).grid(
         row=4, column=1, sticky="w", padx=8, pady=(8, 0)
+    )
+
+    ttk.Button(sender, text="Áudio no Monitor 1", command=lambda: audio_settings(root)).grid(
+        row=4, column=0, sticky="w", pady=(8, 0)
     )
 
     viewer = ttk.Frame(tabs, padding=14)
@@ -322,7 +382,7 @@ def main():
         except ValueError:
             messagebox.showerror("Abrir monitor extra", "Digite um IPv4 válido.", parent=root)
             return
-        if receive("stream", address, "Virtual Display"):
+        if start_monitor(address):
             if remember.get():
                 try:
                     save_address(address)
@@ -367,7 +427,7 @@ def main():
         if address:
             tabs.select(viewer)
             status.set("Abrindo o monitor extra no desktop salvo…")
-            receive("stream", address, "Virtual Display")
+            start_monitor(address)
 
     searched = False
 
@@ -384,6 +444,14 @@ def main():
         root.withdraw()
         root.update_idletasks()
         assert len(tabs.tabs()) == 2
+        launch = receive
+        calls = []
+        try:
+            globals()["receive"] = lambda *args: calls.append(args) or True
+            assert start_monitor("192.0.2.1")
+            assert calls == [("stream", "--audio-on-host", "192.0.2.1", "Virtual Display")]
+        finally:
+            globals()["receive"] = launch
         root.destroy()
         if getattr(sys, "frozen", False):
             with zipfile.ZipFile(package_path()) as bundle:

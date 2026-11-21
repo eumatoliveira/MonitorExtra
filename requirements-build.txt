@@ -1,2 +1,3 @@
 pyinstaller==6.22.3
 zeroconf==0.154.0
+pycaw==20260927

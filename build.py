@@ -7,7 +7,7 @@ from urllib.request import urlretrieve
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parent
-NAME = "MonitorExtra-Automatico"
+NAME = "MonitorExtra-Audio"
 ASSETS = {
     "Apollo-Setup.exe": (
         "https://github.com/ClassicOldSong/Apollo/releases/download/v0.4.6/Apollo-0.4.6.exe",

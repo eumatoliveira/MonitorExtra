@@ -25,6 +25,13 @@ O desktop estava conectado por cabo Ethernet e o notebook por Wi‑Fi na mesma r
 4. No notebook, clique em **Abrir monitor extra**. O app abre a sessão **Virtual Display**. No desktop, clique em **Estender** se o Windows ainda não tiver guardado a disposição desejada. Em **Configurações → Sistema → Tela**, use **Identificar** para descobrir a posição da tela virtual e ajuste sua posição.
 5. Deixe **Abrir automaticamente neste notebook** marcado se quiser repetir a sessão nas próximas aberturas. O app guarda somente o endereço local selecionado. O Moonlight mantém o pareamento no próprio perfil. Se o IP mudar, selecione o desktop novamente. Desmarque a opção para apagar o endereço salvo.
 
+## Manter o áudio no desktop
+
+1. No desktop, abra **Desktop principal → Áudio no Monitor 1**.
+2. Selecione a saída que corresponde ao monitor ou aos alto-falantes e clique em **Usar como saída padrão**. O Windows mostra os nomes dos dispositivos de áudio, que podem ser diferentes do número da tela.
+3. Inicie ou reconecte a sessão pelo botão **Abrir monitor extra** no notebook. O app inicia o Moonlight com o áudio do desktop ativo.
+4. Para ouvir somente no desktop, use **Abrir áudio no Apollo**, desative **Stream Audio** em **Configuração → Áudio/Vídeo** e reconecte. Essa preferência desativa a transmissão de som em todas as sessões do Apollo.
+
 ## Escolhas técnicas e contrapartidas
 
 | Decisão | Por que foi escolhida | Limitação |
@@ -48,13 +55,14 @@ python -m pip install -r requirements-build.txt
 python build.py
 ```
 
-O script confere o SHA-256 dos componentes oficiais, empacota o programa e testa a inicialização do executável. O arquivo final fica em `dist/MonitorExtra-Automatico.exe`.
+O script confere o SHA-256 dos componentes oficiais, empacota o programa e testa a inicialização do executável. O arquivo final fica em `dist/MonitorExtra-Audio.exe`.
 
 ## Projetos utilizados
 
 - [Apollo](https://github.com/ClassicOldSong/Apollo/tree/v0.4.6), responsável pelo driver virtual e pela transmissão.
 - [Moonlight](https://github.com/moonlight-stream/moonlight-qt/tree/v6.2.0), responsável pelo pareamento e pela exibição.
 - [python-zeroconf](https://github.com/python-zeroconf/python-zeroconf), usado para localizar hosts na rede.
+- [Pycaw](https://github.com/AndreMiras/pycaw), usado para listar e escolher a saída padrão no Windows.
 - [PyInstaller](https://pyinstaller.org/), usado para empacotar a aplicação Python.
 
 A autoria indicada acima se refere ao projeto Monitor Extra. Cada componente mantém sua própria autoria e licença.

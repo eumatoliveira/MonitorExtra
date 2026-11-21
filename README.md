@@ -1,4 +1,5 @@
 # Monitor Extra
+# Alternative DUETDISPLAY (FOR FREE) ^^
 
 **Autoria do projeto e validação prática: Matheus Oliveira.**
 
